@@ -17,6 +17,7 @@
 package io.awspring.cloud.paramstore;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import com.amazonaws.services.simplesystemsmanagement.AWSSimpleSystemsManagement;
@@ -26,6 +27,7 @@ import org.springframework.util.StringUtils;
 
 /**
  * @author Eddú Meléndez
+ * @author Manuel Wessner
  * @since 2.3
  */
 public class AwsParamStorePropertySources {
@@ -52,6 +54,8 @@ public class AwsParamStorePropertySources {
 
 		addProfiles(contexts, defaultContext, profiles);
 		contexts.add(defaultContext + "/");
+
+		Collections.reverse(contexts);
 		return contexts;
 	}
 
