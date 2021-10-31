@@ -47,12 +47,12 @@ public class SqsSampleApplication {
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void sendMessage() {
-		this.queueMessagingTemplate.send("InfrastructureStack-spring-aws",
+		this.queueMessagingTemplate.send("DeleteMeQueue",
 				MessageBuilder.withPayload("Spring cloud Aws SQS sample!").build());
 		this.queueMessagingTemplate.convertAndSend("InfrastructureStack-aws-pojo", new Person("Joe", "Doe"));
 	}
 
-	@SqsListener("InfrastructureStack-spring-aws")
+	@SqsListener("DeleteMeQueue")
 	private void listenToMessage(String message) {
 		LOGGER.info("This is message you want to see: {}", message);
 	}

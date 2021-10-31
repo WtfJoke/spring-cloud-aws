@@ -17,6 +17,7 @@
 package io.awspring.cloud.sns.sample;
 
 import com.amazonaws.services.sns.AmazonSNS;
+import io.awspring.cloud.messaging.config.annotation.NotificationSubject;
 import io.awspring.cloud.messaging.core.NotificationMessagingTemplate;
 import io.awspring.cloud.messaging.listener.annotation.SqsListener;
 import org.slf4j.Logger;
@@ -48,12 +49,13 @@ public class SpringSNSSample {
 
 	@EventListener(ApplicationReadyEvent.class)
 	public void sendMessage() {
-		this.notificationMessagingTemplate.send("snsSpring",
+		this.notificationMessagingTemplate.send("DeleteMe",
 				MessageBuilder.withPayload("Spring Cloud AWS SNS Sample!").build());
 	}
 
-	@SqsListener("InfrastructureStack-spring-aws")
-	private void listenToMessage(GenericMessage message) {
+	@SqsListener("DeleteMeQueue")
+	private void listenToMessage(@NotificationSubject String subject, GenericMessage message) {
+		LOGGER.info("subject: {}", subject);
 		LOGGER.info("This is message you want to see: {}", message.getPayload());
 	}
 
