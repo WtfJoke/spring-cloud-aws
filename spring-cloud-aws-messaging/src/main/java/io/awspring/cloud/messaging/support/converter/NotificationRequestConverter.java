@@ -16,6 +16,7 @@
 
 package io.awspring.cloud.messaging.support.converter;
 
+import com.amazonaws.services.sns.message.SnsMessageManager;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.core.MessageAttributeDataTypes;
@@ -28,10 +29,10 @@ import org.springframework.messaging.support.GenericMessage;
 import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.security.PublicKey;
-import java.security.cert.CertificateException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -86,43 +87,38 @@ public class NotificationRequestConverter implements MessageConverter {
 		Assert.notNull(message, "message must not be null");
 		Assert.notNull(targetClass, "target class must not be null");
 
+		String payload = message.getPayload().toString();
 		JsonNode jsonNode;
 		try {
-			jsonNode = this.jsonMapper.readTree(message.getPayload().toString());
+			jsonNode = this.jsonMapper.readTree(payload);
 		}
 		catch (Exception e) {
 			throw new MessageConversionException("Could not read JSON", e);
 		}
 		if (!jsonNode.has("Type")) {
 			throw new MessageConversionException(
-					"Payload: '" + message.getPayload() + "' does not contain a Type attribute", null);
+					"Payload: '" + payload + "' does not contain a Type attribute", null);
 		}
 
 		if (!"Notification".equals(jsonNode.get("Type").asText())) {
-			throw new MessageConversionException("Payload: '" + message.getPayload() + "' is not a valid notification",
+			throw new MessageConversionException("Payload: '" + payload + "' is not a valid notification",
 					null);
 		}
 
 		if (!jsonNode.has("Message")) {
-			throw new MessageConversionException("Payload: '" + message.getPayload() + "' does not contain a message",
+			throw new MessageConversionException("Payload: '" + payload + "' does not contain a message",
 					null);
 		}
 
-		if (jsonNode.has("Signature")){
-			// verify signature
-			boolean valid = false;
-			try {
-				PublicKey key = SignatureVerfifier.getKeyFromCert(jsonNode.get("SigningCertURL").asText());
-				valid = SignatureVerfifier.verify(jsonNode, key);
-			} catch (CertificateException | IOException e) {
-				throw new MessageConversionException("Payload: '" + message.getPayload() + "' issue while verifying signature",
+		if (jsonNode.has("SignatureVersion")){
+			// Verify signature
+			try (InputStream messageStream = new ByteArrayInputStream(payload.getBytes())) {
+				// Unmarshalling the message is not needed, but also done in SnsMessageManager
+				new SnsMessageManager().parseMessage(messageStream);
+			} catch (IOException e) {
+				throw new MessageConversionException("Payload: '" + payload + "' issue while verifying signature",
 					e);
 			}
-			if (!valid){
-				throw new MessageConversionException("Payload: '" + message.getPayload() + "' does not contain a valid signature",
-					null);
-			}
-
 		}
 
 		String messagePayload = jsonNode.get("Message").asText();
