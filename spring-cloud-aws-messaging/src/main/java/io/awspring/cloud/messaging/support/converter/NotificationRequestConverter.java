@@ -16,17 +16,10 @@
 
 package io.awspring.cloud.messaging.support.converter;
 
-import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.UUID;
-
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.awspring.cloud.messaging.core.MessageAttributeDataTypes;
 import io.awspring.cloud.messaging.core.QueueMessageUtils;
-
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageHeaders;
 import org.springframework.messaging.converter.MessageConversionException;
@@ -34,6 +27,15 @@ import org.springframework.messaging.converter.MessageConverter;
 import org.springframework.messaging.support.GenericMessage;
 import org.springframework.util.Assert;
 import org.springframework.util.MimeType;
+
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.security.PublicKey;
+import java.security.cert.CertificateException;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * @author Agim Emruli
@@ -104,6 +106,23 @@ public class NotificationRequestConverter implements MessageConverter {
 		if (!jsonNode.has("Message")) {
 			throw new MessageConversionException("Payload: '" + message.getPayload() + "' does not contain a message",
 					null);
+		}
+
+		if (jsonNode.has("Signature")){
+			// verify signature
+			boolean valid = false;
+			try {
+				PublicKey key = SignatureVerfifier.getKeyFromCert(jsonNode.get("SigningCertURL").asText());
+				valid = SignatureVerfifier.verify(jsonNode, key);
+			} catch (CertificateException | IOException e) {
+				throw new MessageConversionException("Payload: '" + message.getPayload() + "' issue while verifying signature",
+					e);
+			}
+			if (!valid){
+				throw new MessageConversionException("Payload: '" + message.getPayload() + "' does not contain a valid signature",
+					null);
+			}
+
 		}
 
 		String messagePayload = jsonNode.get("Message").asText();
